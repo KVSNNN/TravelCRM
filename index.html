@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TravelCRM â€” Travel & Tourism</title>
+    <title>TravelCRM — Travel & Tourism</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
       rel="stylesheet"
@@ -1100,8 +1100,8 @@
       rawActivityLog = activityLog;
 
       // Database Configuration
-      const SUPABASE_URL = "https://negbjaglmevdyiobmwsz.supabase.co";
-      const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZ2JqYWdsbWV2ZHlpb2Jtd3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA2OTksImV4cCI6MjA5NjczNjY5OX0.Zd50uFKP4eq_sq30KvU7H4zLI8cBE8Bty014gS-eBp4";
+      const SUPABASE_URL = "https://dbswayqbquupqzpcswkx.supabase.co";
+      const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRic3dheXFicXV1cHF6cGNzd2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NjM0NTgsImV4cCI6MjA5NzUzOTQ1OH0.9rv3SqmU2a-5ftRBDbyDfjV7XLeAxNBmfTKJJm6luiU";
 
       var dbUrl = SUPABASE_URL || localStorage.getItem("supabase_url");
       var dbKey = SUPABASE_KEY || localStorage.getItem("supabase_key");
@@ -2605,7 +2605,7 @@
             '</span></td>';
             
           if (isSupreme) {
-            h += '<td class="px-4 py-3 text-pri-600/70">' + (u.parentUser || 'â€”') + '</td>';
+            h += '<td class="px-4 py-3 text-pri-600/70">' + (u.parentUser || '—') + '</td>';
           }
 
           h += '<td class="px-4 py-3"><span class="badge ' +
@@ -2640,7 +2640,7 @@
               u.id +
               ')" class="text-amber-400 hover:text-amber-600" title="Reset Password"><i class="fas fa-key"></i></button>';
           } else {
-            h += '<span class="text-pri-300">â€”</span>';
+            h += '<span class="text-pri-300">—</span>';
           }
           h += "</td></tr>";
         });
@@ -3222,11 +3222,9 @@
         var amount = b && b[prefix + idx + "Amount"] ? b[prefix + idx + "Amount"] : idx === 1 ? legacyAmount || "" : "";
         var percent = b && b[prefix + idx + "Percent"] ? b[prefix + idx + "Percent"] : "";
         var date = b && b[prefix + idx + "Date"] ? b[prefix + idx + "Date"] : idx === 1 ? legacyDate || "" : "";
-        var completed = b && b[prefix + idx + "Completed"] ? " checked" : "";
-        var completedHandler = side === "supplier" ? " onchange=\"autoUpdateSupplierDueDate()\"" : "";
         if (!percent && amount && totalField) percent = ((parseFloat(amount) / parseFloat(totalField)) * 100).toFixed(2);
         return (
-          '<div class="grid grid-cols-4 gap-3 mb-3"><div><label class="block text-xs font-semibold text-' +
+          '<div class="grid grid-cols-3 gap-3 mb-3"><div><label class="block text-xs font-semibold text-' +
           accent +
           '-700 uppercase mb-1">' +
           idx +
@@ -3235,9 +3233,7 @@
           idx +
           'Date" value="' +
           toInp(date) +
-          '" class="w-full border border-cream-300 rounded-lg px-3 py-2.5 text-sm"' +
-          (side === "supplier" ? ' onchange="autoUpdateSupplierDueDate()"' : "") +
-          '></div><div><label class="block text-xs font-semibold text-' +
+          '" class="w-full border border-cream-300 rounded-lg px-3 py-2.5 text-sm"></div><div><label class="block text-xs font-semibold text-' +
           accent +
           '-700 uppercase mb-1">' +
           (side === "customer" ? "Collected" : "Paid") +
@@ -3261,15 +3257,7 @@
           side +
           "'," +
           idx +
-          ',\'amount\')"></div><label class="flex items-center gap-2 text-xs font-semibold text-' +
-          accent +
-          '-700 uppercase pt-7"><input type="checkbox" name="' +
-          prefix +
-          idx +
-          'Completed" value="1"' +
-          completed +
-          completedHandler +
-          ' class="h-4 w-4 rounded border-cream-300"> Completed</label></div>'
+          ',\'amount\')"></div></div>'
         );
       }
       function openBForm(id, prefType, prefCid) {
@@ -3361,15 +3349,13 @@
           toInp(b ? b.travelDateTo : "") +
           '" required class="w-full border border-cream-300 rounded-lg px-3 py-2.5 text-sm"></div></div></div>';
         html +=
-          '<div class="border-t border-cream-200 pt-4"><h4 class="font-semibold text-pri-800 text-sm mb-3">Collection Details</h4><div class="border border-pri-200 rounded-lg p-4 bg-pri-50/30 mb-4"><label class="block text-xs font-semibold text-pri-700 uppercase mb-1">Total amount to Receive Rs.</label><input type="number" name="customerRate" step="1" min="0" value="' +
+          '<div class="border-t border-cream-200 pt-4"><h4 class="font-semibold text-pri-800 text-sm mb-3">Financial Details</h4><div class="border border-pri-200 rounded-lg p-4 bg-pri-50/30 mb-4"><label class="block text-xs font-semibold text-pri-700 uppercase mb-1">Total amount to Receive Rs.</label><input type="number" name="customerRate" step="1" min="0" value="' +
           (b && (b.customerRate || b.amountCollected) ? (b.customerRate || b.amountCollected) : "") +
           '" required class="w-full border border-pri-300 rounded-lg px-3 py-2.5 text-sm mb-4" oninput="autoCalc()">' +
           paymentRow(b, "customer", 1, b && (b.customerRate || b.amountCollected), b && b.amountPaidByCustomer, b && b.customerPaidDate) +
           paymentRow(b, "customer", 2, b && (b.customerRate || b.amountCollected), b && b.customerBalancePaid, b && b.customerBalancePaidDate) +
           paymentRow(b, "customer", 3, b && (b.customerRate || b.amountCollected), "", "") +
           '<div><label class="block text-xs font-semibold text-pri-700 uppercase mb-1">Balance Amount required</label><input type="number" name="customerBalanceAmount" step="1" readonly class="w-full border border-cream-200 bg-cream-50 rounded-lg px-3 py-2.5 text-sm text-pri-600 font-semibold" value="0"></div></div>';
-        html +=
-          '<h4 class="font-semibold text-indigo-800 text-sm mb-3">Payment Details</h4>';
         html +=
           '<div class="border border-indigo-200 rounded-lg p-4 bg-indigo-50/40 mb-4"><label class="block text-xs font-semibold text-indigo-700 uppercase mb-1"><i class="fas fa-building mr-1 text-indigo-400"></i>Total amount to pay Rs.</label><input type="number" name="supplierRate" step="1" min="0" value="' +
           (b && (b.supplierRate || b.totalAmountPayable) ? (b.supplierRate || b.totalAmountPayable) : "") +
@@ -3449,20 +3435,6 @@
             "w-full border border-cream-200 bg-green-50 rounded-lg px-3 py-2.5 text-sm font-semibold " +
             (p >= 0 ? "profit-pos" : "profit-neg");
         };
-        window.autoUpdateSupplierDueDate = function () {
-          var f = document.getElementById("bForm");
-          if (!f || !f.supplierPaymentDueDate) return;
-          if (f.supplierPayment1Completed && f.supplierPayment1Completed.checked) {
-            f.supplierPaymentDueDate.value = f.supplierPayment2Date && f.supplierPayment2Date.value ? f.supplierPayment2Date.value : "";
-          }
-          if (f.supplierPayment2Completed && f.supplierPayment2Completed.checked) {
-            f.supplierPaymentDueDate.value = f.supplierPayment3Date && f.supplierPayment3Date.value ? f.supplierPayment3Date.value : "";
-          }
-          if (f.supplierPayment3Completed && f.supplierPayment3Completed.checked) {
-            f.supplierPaymentDueDate.value = "";
-          }
-          checkDueBlink();
-        };
         window.checkDueBlink = function () {
           var f = document.getElementById("bForm");
           if (!f) return;
@@ -3497,8 +3469,6 @@
           d["customerPayment" + n + "Percent"] = parseFloat(d["customerPayment" + n + "Percent"]) || 0;
           d["supplierPayment" + n + "Amount"] = parseFloat(d["supplierPayment" + n + "Amount"]) || 0;
           d["supplierPayment" + n + "Percent"] = parseFloat(d["supplierPayment" + n + "Percent"]) || 0;
-          d["customerPayment" + n + "Completed"] = d["customerPayment" + n + "Completed"] === "1";
-          d["supplierPayment" + n + "Completed"] = d["supplierPayment" + n + "Completed"] === "1";
           customerPaidTotal += d["customerPayment" + n + "Amount"];
           supplierPaidTotal += d["supplierPayment" + n + "Amount"];
         });
@@ -3508,13 +3478,6 @@
         d.totalAmountPayable = d.supplierRate;
         d.amountPaid = d.amountPaidToSupplier;
         d.amountCollected = d.customerRate;
-        if (d.supplierPayment3Completed) {
-          d.supplierPaymentDueDate = "";
-        } else if (d.supplierPayment2Completed) {
-          d.supplierPaymentDueDate = d.supplierPayment3Date || "";
-        } else if (d.supplierPayment1Completed) {
-          d.supplierPaymentDueDate = d.supplierPayment2Date || "";
-        }
         [
           "bookingDate",
           "travelDate",
