@@ -3167,13 +3167,18 @@
           d.id = parseInt(d.id);
           var dbPayload = camelToSnake(d);
           try {
-            const { error } = await supabaseClient.from("clients").update(dbPayload).eq("id", d.id);
-            if (error) throw error;
+            if (supabaseClient) {
+              const { error } = await supabaseClient.from("clients").update(dbPayload).eq("id", d.id);
+              if (error) throw error;
+            } else {
+              var idx = rawClients.findIndex(function(x) { return x.id === d.id; });
+              if (idx !== -1) Object.assign(rawClients[idx], d);
+            }
             await addLog("edit_client", "Edited client " + d.name);
             toast("Client updated");
           } catch (err) {
             console.error(err);
-            toast("Failed to update client", "error");
+            toast("Failed to update client: " + (err.message || ""), "error");
             return;
           }
         } else {
@@ -3184,18 +3189,27 @@
           d.ownerUser = currentUser.role === "admin" ? currentUser.parentUser : currentUser.username;
           var dbPayload = camelToSnake(d);
           try {
-            const { error } = await supabaseClient.from("clients").insert(dbPayload);
-            if (error) throw error;
+            if (supabaseClient) {
+              const { error } = await supabaseClient.from("clients").insert(dbPayload);
+              if (error) throw error;
+            } else {
+              d.id = nextId.client++;
+              rawClients.unshift(d);
+            }
             await addLog("create_client", "Created client " + d.name);
             toast("Client added");
           } catch (err) {
             console.error(err);
-            toast("Failed to add client", "error");
+            toast("Failed to add client: " + (err.message || ""), "error");
             return;
           }
         }
         closeM();
-        await loadDataFromSupabase();
+        if (supabaseClient) {
+          await loadDataFromSupabase();
+        } else {
+          applyDataVisibilityFilter();
+        }
         render();
       }
       function delC(id) {
@@ -3594,8 +3608,13 @@
             d.modifiedBy = currentUser.username;
             d.modifiedAt = nowTS();
             var dbPayload = camelToSnake(d);
-            const { error } = await supabaseClient.from("bookings").update(dbPayload).eq("id", d.id);
-            if (error) throw error;
+            if (supabaseClient) {
+              const { error } = await supabaseClient.from("bookings").update(dbPayload).eq("id", d.id);
+              if (error) throw error;
+            } else {
+              var idx = rawBookings.findIndex(function(x) { return x.id === d.id; });
+              if (idx !== -1) Object.assign(rawBookings[idx], d);
+            }
             await addLog("edit_booking", "Edited booking " + d.pnrRef);
             toast("Booking updated");
           } else {
@@ -3608,17 +3627,26 @@
             d.modifiedBy = "";
             d.modifiedAt = "";
             var dbPayload = camelToSnake(d);
-            const { error } = await supabaseClient.from("bookings").insert(dbPayload);
-            if (error) throw error;
+            if (supabaseClient) {
+              const { error } = await supabaseClient.from("bookings").insert(dbPayload);
+              if (error) throw error;
+            } else {
+              d.id = nextId.booking++;
+              rawBookings.unshift(d);
+            }
             await addLog("create_booking", "Created booking " + d.pnrRef);
             toast("Booking created");
           }
           closeM();
-          await loadDataFromSupabase();
+          if (supabaseClient) {
+            await loadDataFromSupabase();
+          } else {
+            applyDataVisibilityFilter();
+          }
           render();
         } catch (err) {
           console.error(err);
-          toast("Failed to save booking", "error");
+          toast("Failed to save booking: " + (err.message || ""), "error");
         }
       }
 
