@@ -1364,15 +1364,41 @@
       function isDueTom(s) {
         return daysUntilDate(s) === 1;
       }
+      function activeCustomerPaymentIndex(b) {
+        if (b.customerPayment1Status !== "Completed" && b.customerPayment1Date) return 1;
+        if (b.customerPayment1Status === "Completed" && b.customerPayment2Status !== "Completed" && b.customerPayment2Date) return 2;
+        if (b.customerPayment1Status === "Completed" && b.customerPayment2Status === "Completed" && b.customerPayment3Status !== "Completed" && b.customerPayment3Date) return 3;
+        return null;
+      }
+      function customerDueDate(b) {
+        var idx = activeCustomerPaymentIndex(b);
+        return idx ? b["customerPayment" + idx + "Date"] : null;
+      }
+      function activeSupplierPaymentIndex(b) {
+        if (b.supplierPayment1Status !== "Completed" && b.supplierPayment1Date) return 1;
+        if (b.supplierPayment1Status === "Completed" && b.supplierPayment2Status !== "Completed" && b.supplierPayment2Date) return 2;
+        if (b.supplierPayment1Status === "Completed" && b.supplierPayment2Status === "Completed" && b.supplierPayment3Status !== "Completed" && b.supplierPayment3Date) return 3;
+        return null;
+      }
       function supplierDueDate(b) {
-        return b.supplierPaymentDueDate || b.paymentDueDate;
+        var idx = activeSupplierPaymentIndex(b);
+        if (idx) return b["supplierPayment" + idx + "Date"];
+        if (!b.supplierPayment1Date && !b.supplierPayment2Date && !b.supplierPayment3Date && b.supplierPayment1Status !== "Completed") {
+           return b.supplierPaymentDueDate || b.paymentDueDate;
+        }
+        return null;
       }
       function hasSupplierBalance(b) {
         return unpaid(b) > 0;
       }
       function shouldShowSupplierPaymentAlert(b) {
-        if (!b || b.status !== "active" || !hasSupplierBalance(b)) return false;
+        if (!b || b.status !== "active") return false;
         var days = daysUntilDate(supplierDueDate(b));
+        return days !== null && days <= 2;
+      }
+      function shouldShowCustomerPaymentAlert(b) {
+        if (!b || b.status !== "active") return false;
+        var days = daysUntilDate(customerDueDate(b));
         return days !== null && days <= 2;
       }
       function supplierPaymentAlertLabel(b) {
@@ -1389,9 +1415,23 @@
           ? "text-red-600"
           : "text-amber-600";
       }
+      function customerPaymentAlertLabel(b) {
+        var days = daysUntilDate(customerDueDate(b));
+        if (days === null) return "";
+        if (days < 0) return "OVERDUE";
+        if (days === 0) return "DUE TODAY";
+        if (days === 1) return "DUE TOMORROW";
+        return "DUE IN " + days + " DAYS";
+      }
+      function customerPaymentAlertClass(b) {
+        var days = daysUntilDate(customerDueDate(b));
+        return days !== null && days < 0
+          ? "text-red-600"
+          : "text-amber-600";
+      }
       function isSupplierPaymentOverdue(b) {
         var days = daysUntilDate(supplierDueDate(b));
-        return days !== null && days < 0 && hasSupplierBalance(b);
+        return days !== null && days < 0;
       }
       function isOverdue(s) {
         var d = parseD(s);
@@ -1430,7 +1470,7 @@
               : b.status === "completed"
                 ? "row-done"
                 : "row-active";
-        if (shouldShowSupplierPaymentAlert(b))
+        if (shouldShowSupplierPaymentAlert(b) || shouldShowCustomerPaymentAlert(b))
           c += " due-alert";
         return c;
       }
@@ -1606,18 +1646,22 @@
         document.getElementById("loginError").classList.add("hidden");
       }
       function checkDue() {
-        var due = travelBookings.filter(function (b) {
+        var dueSup = travelBookings.filter(function (b) {
           return shouldShowSupplierPaymentAlert(b);
         });
+        var dueCust = travelBookings.filter(function (b) {
+          return shouldShowCustomerPaymentAlert(b);
+        });
+        var totalAlerts = dueSup.length + dueCust.length;
         var bell = document.getElementById("alertCount");
-        if (due.length > 0) {
+        if (totalAlerts > 0) {
           bell.classList.remove("hidden");
           bell.style.display = "flex";
-          bell.textContent = due.length;
-          toast(
-            due.length + " supplier payment reminder(s) need attention.",
-            "warning",
-          );
+          bell.textContent = totalAlerts;
+          var msg = [];
+          if (dueSup.length) msg.push(dueSup.length + " supplier payment(s)");
+          if (dueCust.length) msg.push(dueCust.length + " collection(s)");
+          toast(msg.join(" and ") + " need attention.", "warning");
         } else {
           bell.classList.add("hidden");
           bell.style.display = "none";
@@ -1625,41 +1669,31 @@
         }
       }
       function showDueAlerts() {
-        var due = travelBookings.filter(function (b) {
-          return shouldShowSupplierPaymentAlert(b);
-        });
-        var h =
-          '<div class="w-full max-w-lg p-6"><h3 class="font-display font-bold text-pri-800 text-lg mb-4"><i class="fas fa-bell text-amber-500 mr-2"></i>Supplier Payment Alerts</h3>';
-        if (!due.length)
+        var dueSup = travelBookings.filter(function (b) { return shouldShowSupplierPaymentAlert(b); });
+        var dueCust = travelBookings.filter(function (b) { return shouldShowCustomerPaymentAlert(b); });
+        var h = '<div class="w-full max-w-lg p-6"><h3 class="font-display font-bold text-pri-800 text-lg mb-4"><i class="fas fa-bell text-amber-500 mr-2"></i>Payment & Collection Alerts</h3>';
+        if (!dueSup.length && !dueCust.length)
           h += '<p class="text-sm text-pri-600/60">No alerts.</p>';
         else {
-          due.forEach(function (b) {
+          dueSup.forEach(function (b) {
             var cl = gC(b.clientId);
             var ov = isSupplierPaymentOverdue(b);
-            h +=
-              '<div class="p-3 rounded-lg mb-2 ' +
-              (ov
-                ? "bg-red-50 border border-red-200"
-                : "bg-amber-50 border border-amber-200") +
-              '"><p class="text-sm font-semibold text-pri-800">' +
-              (cl ? cl.name : "?") +
-              " - " +
-              b.bookingName +
-              '</p><p class="text-xs text-pri-600/70">' +
-              b.pnrRef +
-              " | Due: " +
-              fD(supplierDueDate(b)) +
-              " | Supplier balance: " +
-              fmt(unpaid(b)) +
-              '</p><p class="text-xs ' +
-              supplierPaymentAlertClass(b) +
-              ' font-semibold mt-1">' +
-              supplierPaymentAlertLabel(b) +
-              "</p></div>";
+            h += '<div class="p-3 rounded-lg mb-2 ' + (ov ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200") + '"><p class="text-sm font-semibold text-pri-800">' + (cl ? cl.name : "?") + " - " + b.bookingName + '</p><p class="text-xs text-pri-600/70">' + b.pnrRef + " | Supplier Due: " + fD(supplierDueDate(b)) + " | Supplier balance: " + fmt(unpaid(b)) + '</p><p class="text-xs ' + supplierPaymentAlertClass(b) + ' font-semibold mt-1">Supplier: ' + supplierPaymentAlertLabel(b) + "</p></div>";
+          });
+          dueCust.forEach(function (b) {
+            var cl = gC(b.clientId);
+            var days = daysUntilDate(customerDueDate(b));
+            var ov = days !== null && days < 0;
+            var lbl = "";
+            if (days < 0) lbl = "OVERDUE";
+            else if (days === 0) lbl = "DUE TODAY";
+            else if (days === 1) lbl = "DUE TOMORROW";
+            else lbl = "DUE IN " + days + " DAYS";
+            var cls = days !== null && days < 0 ? "text-red-600" : "text-amber-600";
+            h += '<div class="p-3 rounded-lg mb-2 ' + (ov ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200") + '"><p class="text-sm font-semibold text-pri-800">' + (cl ? cl.name : "?") + " - " + b.bookingName + '</p><p class="text-xs text-pri-600/70">' + b.pnrRef + " | Collection Due: " + fD(customerDueDate(b)) + '</p><p class="text-xs ' + cls + ' font-semibold mt-1">Collection: ' + lbl + "</p></div>";
           });
         }
-        h +=
-          '<button onclick="closeM()" class="mt-4 w-full bg-pri-500 hover:bg-pri-600 text-white py-2 rounded-lg text-sm font-semibold">Close</button></div>';
+        h += '<button onclick="closeM()" class="mt-4 w-full bg-pri-500 hover:bg-pri-600 text-white py-2 rounded-lg text-sm font-semibold">Close</button></div>';
         openM(h);
       }
 
@@ -2186,6 +2220,8 @@
             fmt(bkProfit(b)) +
             '</td><td class="px-3 py-2.5">' +
             '<span class="inline-block px-2 py-0.5 border-2 border-red-600 rounded bg-[#dedddc] text-red-800 font-bold text-xs text-center whitespace-nowrap">' + fD(supplierDueDate(b)) + '</span>' +
+            (shouldShowSupplierPaymentAlert(b) ? '<br><span class="' + supplierPaymentAlertClass(b) + ' font-bold text-[10px]">' + supplierPaymentAlertLabel(b) + '</span>' : "") +
+            (shouldShowCustomerPaymentAlert(b) ? '<br><span class="' + customerPaymentAlertClass(b) + ' font-bold text-[10px]">Col: ' + customerPaymentAlertLabel(b) + '</span>' : "") +
             "</td>";
           h += '<td class="px-3 py-2.5"><div class="flex gap-1">';
           if (b.status === "active") {
@@ -2387,6 +2423,9 @@
             '<span class="inline-block px-2 py-0.5 border-2 border-red-600 rounded bg-[#dedddc] text-red-800 font-bold text-xs text-center whitespace-nowrap">' + fD(supplierDueDate(b)) + '</span>' +
             (shouldShowSupplierPaymentAlert(b)
               ? '<br><span class="' + supplierPaymentAlertClass(b) + ' font-bold text-[10px]">' + supplierPaymentAlertLabel(b) + '</span>'
+              : "") +
+            (shouldShowCustomerPaymentAlert(b)
+              ? '<br><span class="' + customerPaymentAlertClass(b) + ' font-bold text-[10px]">Col: ' + customerPaymentAlertLabel(b) + '</span>'
               : "") +
             "</td>";
           h += '<td class="px-3 py-2.5"><div class="flex gap-1 flex-wrap">';
@@ -3222,9 +3261,13 @@
         var amount = b && b[prefix + idx + "Amount"] ? b[prefix + idx + "Amount"] : idx === 1 ? legacyAmount || "" : "";
         var percent = b && b[prefix + idx + "Percent"] ? b[prefix + idx + "Percent"] : "";
         var date = b && b[prefix + idx + "Date"] ? b[prefix + idx + "Date"] : idx === 1 ? legacyDate || "" : "";
+        var status = b && b[prefix + idx + "Status"] ? b[prefix + idx + "Status"] : "Pending";
         if (!percent && amount && totalField) percent = ((parseFloat(amount) / parseFloat(totalField)) * 100).toFixed(2);
+        
+        var checkMark = status === "Completed" ? '<i id="check_' + prefix + idx + '" class="fas fa-check-circle text-green-500 absolute right-8 top-[38px]"></i>' : '<i id="check_' + prefix + idx + '" class="fas fa-check-circle text-green-500 absolute right-8 top-[38px] hidden"></i>';
+
         return (
-          '<div class="grid grid-cols-3 gap-3 mb-3"><div><label class="block text-xs font-semibold text-' +
+          '<div class="grid grid-cols-4 gap-3 mb-3 relative"><div><label class="block text-xs font-semibold text-' +
           accent +
           '-700 uppercase mb-1">' +
           idx +
@@ -3233,7 +3276,7 @@
           idx +
           'Date" value="' +
           toInp(date) +
-          '" class="w-full border border-cream-300 rounded-lg px-3 py-2.5 text-sm"></div><div><label class="block text-xs font-semibold text-' +
+          '" class="w-full border border-cream-300 rounded-lg px-3 py-2.5 text-sm" oninput="checkDueBlink()"></div><div><label class="block text-xs font-semibold text-' +
           accent +
           '-700 uppercase mb-1">' +
           (side === "customer" ? "Collected" : "Paid") +
@@ -3257,7 +3300,16 @@
           side +
           "'," +
           idx +
-          ',\'amount\')"></div></div>'
+          ',\'amount\')"></div><div><label class="block text-xs font-semibold text-' +
+          accent +
+          '-700 uppercase mb-1">Status</label><select name="' +
+          prefix +
+          idx +
+          'Status" class="w-full border border-cream-300 rounded-lg px-3 py-2.5 text-sm appearance-none" onchange="document.getElementById(\'check_' + prefix + idx + '\').style.display = this.value === \'Completed\' ? \'block\' : \'none\'; autoCalc(\'' + side + '\',' + idx + ',\'status\'); checkDueBlink();"><option value="Pending"' +
+          (status !== "Completed" ? " selected" : "") +
+          '>Pending</option><option value="Completed"' +
+          (status === "Completed" ? " selected" : "") +
+          '>Completed</option></select>' + checkMark + '</div></div>'
         );
       }
       function openBForm(id, prefType, prefCid) {
@@ -3438,18 +3490,47 @@
         window.checkDueBlink = function () {
           var f = document.getElementById("bForm");
           if (!f) return;
-          var dStr = f.supplierPaymentDueDate.value;
-          if (!dStr) {
-            f.supplierPaymentDueDate.classList.remove("due-alert");
-            return;
+          function check(prefix) {
+            var activeIdx = null;
+            for(var n=1; n<=3; n++){
+              var st = f[prefix + n + "Status"];
+              var dt = f[prefix + n + "Date"];
+              if (st && st.value !== "Completed" && dt && dt.value) {
+                activeIdx = n;
+                break;
+              }
+            }
+            for(var n=1; n<=3; n++){
+              var dt = f[prefix + n + "Date"];
+              if (dt) {
+                if (n === activeIdx && dt.value) {
+                  var d = new Date(dt.value);
+                  var now = new Date();
+                  now.setHours(0,0,0,0);
+                  var diff = (d - now)/(1000*60*60*24);
+                  if (diff <= 2 && diff >= 0) dt.classList.add("due-alert");
+                  else dt.classList.remove("due-alert");
+                } else {
+                  dt.classList.remove("due-alert");
+                }
+              }
+            }
           }
-          var d = new Date(dStr);
-          var now = new Date();
-          now.setHours(0, 0, 0, 0);
-          var diff = (d - now) / (1000 * 60 * 60 * 24);
-          if (diff <= 2 && diff >= 0)
-            f.supplierPaymentDueDate.classList.add("due-alert");
-          else f.supplierPaymentDueDate.classList.remove("due-alert");
+          check("customerPayment");
+          check("supplierPayment");
+          var ldt = f.supplierPaymentDueDate;
+          if (ldt) {
+            if (ldt.value) {
+              var d = new Date(ldt.value);
+              var now = new Date();
+              now.setHours(0,0,0,0);
+              var diff = (d - now)/(1000*60*60*24);
+              if (diff <= 2 && diff >= 0) ldt.classList.add("due-alert");
+              else ldt.classList.remove("due-alert");
+            } else {
+              ldt.classList.remove("due-alert");
+            }
+          }
         };
         autoCalc();
         checkDueBlink();
@@ -3469,8 +3550,12 @@
           d["customerPayment" + n + "Percent"] = parseFloat(d["customerPayment" + n + "Percent"]) || 0;
           d["supplierPayment" + n + "Amount"] = parseFloat(d["supplierPayment" + n + "Amount"]) || 0;
           d["supplierPayment" + n + "Percent"] = parseFloat(d["supplierPayment" + n + "Percent"]) || 0;
-          customerPaidTotal += d["customerPayment" + n + "Amount"];
-          supplierPaidTotal += d["supplierPayment" + n + "Amount"];
+          if (d["customerPayment" + n + "Status"] === "Completed") {
+            customerPaidTotal += d["customerPayment" + n + "Amount"];
+          }
+          if (d["supplierPayment" + n + "Status"] === "Completed") {
+            supplierPaidTotal += d["supplierPayment" + n + "Amount"];
+          }
         });
         d.amountPaidByCustomer = customerPaidTotal;
         d.customerBalancePaid = d.customerPayment2Amount + d.customerPayment3Amount;
